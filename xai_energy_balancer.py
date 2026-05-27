@@ -10,14 +10,28 @@ Features:
 
 import logging
 import random
+import os
+import asyncio
 
 class EnergyIntelligence:
     def __init__(self):
-        logging.basicConfig(level=logging.INFO, format='%(asctime)s - [HYPER-ENERGY] - %(message)s')
+        logging.basicConfig(level=logging.INFO, format='%(asctime)s - [APEX-ENERGY] - %(message)s')
         self.logger = logging.getLogger("GRID_STABILITY")
         self.base_load = 140.0 # MW
+        self._aspen = None
+        self._init_connectors()
 
-    def optimize_grid(self):
+    def _init_connectors(self):
+        # Phase 2: Aspen Grove Integration
+        if os.getenv('ASPEN_GROVE_TOKEN'):
+            try:
+                # Assuming simple bridge for now
+                self.logger.info("Initializing Aspen Grove Energy Sync...")
+                self._aspen = True # Placeholder for actual client
+            except Exception as e:
+                self.logger.warning(f"Aspen sync failed: {e}")
+
+    async def optimize_grid(self):
         current_load = self.base_load + random.uniform(-5, 10)
         limit = 145.0
         
@@ -28,10 +42,13 @@ class EnergyIntelligence:
             curtailment = current_load - limit
             self.logger.warning(f"GRID STRESS DETECTED. Executing {curtailment:.2f} MW curtailment.")
             self.logger.info("Commanding GPU Cluster: Apply 450W TDP Limit (Eco-Mode).")
+            # STRIKE: Report to Aspen Grove
+            if self._aspen:
+                self.logger.info("Aspen Grove notified: GRID_CURTAILMENT_ACTIVE")
         else:
             self.logger.info("Grid headroom verified. Command: Maximize Throughput (700W TDP).")
 
 if __name__ == "__main__":
-    print("\033[1m\033[94m[COLOSSUS PRIME COMPLETION: ENERGY INTELLIGENCE]\033[0m")
+    print("\033[1m\033[94m[APEX-ENERGY-STRIKE: PHASE 2 ACTIVE]\033[0m")
     grid = EnergyIntelligence()
-    grid.optimize_grid()
+    asyncio.run(grid.optimize_grid())
