@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "PowerState",
+  "description": "Canonical power demand snapshot for Colossus 2 — consumed by cooling, servers, and Gauntlet planning",
+  "type": "object",
+  "required": [
+    "snapshot_id",
+    "timestamp",
+    "total_draw_kw",
+    "zones"
+  ],
+  "properties": {
+    "snapshot_id": { "type": "string", "format": "uuid" },
+    "timestamp": { "type": "string", "format": "date-time" },
+    "total_draw_kw": {
+      "type": "number",
+      "description": "Total instantaneous facility draw in kW"
+    },
+    "grid_draw_kw": { "type": "number" },
+    "generator_draw_kw": { "type": "number" },
+    "megapack_net_kw": {
+      "type": "number",
+      "description": "Positive = discharging (supplying load), negative = charging"
+    },
+    "grid_price_usd_per_mwh": { "type": "number" },
+    "pue": {
+      "type": "number",
+      "description": "Power Usage Effectiveness at time of snapshot"
+    },
+    "zones": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["zone_id", "draw_kw"],
+        "properties": {
+          "zone_id": { "type": "string", "examples": ["ZONE-A", "ZONE-B", "ZONE-C", "ZONE-D"] },
+          "draw_kw": { "type": "number" },
+          "cooling_kw": { "type": "number" },
+          "compute_kw": { "type": "number" },
+          "rack_count": { "type": "integer" },
+          "avg_inlet_temp_c": { "type": "number" },
+          "avg_outlet_temp_c": { "type": "number" }
+        }
+      }
+    },
+    "megapacks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "state_of_charge_pct", "net_kw"],
+        "properties": {
+          "id": { "type": "string" },
+          "capacity_mwh": { "type": "number" },
+          "state_of_charge_pct": { "type": "number", "minimum": 0, "maximum": 100 },
+          "net_kw": { "type": "number" },
+          "status": {
+            "type": "string",
+            "enum": ["charging", "discharging", "idle", "fault"]
+          }
+        }
+      }
+    }
+  }
+}
