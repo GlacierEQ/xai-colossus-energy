@@ -1,128 +1,80 @@
-# ⚡ xAI Colossus — Energy Systems
+# xai-colossus-energy
 
-> **150 MVA grid-tied power architecture** sustaining 200,000+ NVIDIA H100 GPUs at full inference load — with zero-interruption failover, Tesla Megapack buffer orchestration, and real-time GPU demand forecasting.
+> **Gigawatt-Scale Microgrid & Behind-the-Meter Power Architecture**
 
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Grid Stability](https://img.shields.io/badge/Grid%20Stability-99.9997%25-brightgreen)](#grid-architecture)
-[![Megapack Buffer](https://img.shields.io/badge/Megapack%20Buffer-560MWh-blue)](#megapack-buffer)
-[![PUE Target](https://img.shields.io/badge/PUE-1.12-green)](#efficiency)
-
----
-
-## Why Energy is the Colossus Constraint
-
-At 150 MVA sustained draw, Colossus consumes more power than many mid-sized cities. A single second of unplanned downtime at full load costs:
-- **$2.1M+ in lost inference revenue**
-- **847,000 in-flight AI jobs terminated**
-- **Cascading thermal shock** across 400+ cooling circuits
-
-This system solves that. Every watt is tracked, buffered, balanced, and failover-protected in real time.
+[![Status](https://img.shields.io/badge/status-active-brightgreen)](https://github.com/GlacierEQ/xai-colossus-energy)
+[![Scale](https://img.shields.io/badge/scale-1.5%20GW-blue)](https://github.com/GlacierEQ/xai-colossus-energy)
+[![Part of](https://img.shields.io/badge/part%20of-xai--colossus--community-orange)](https://github.com/GlacierEQ/xai-colossus-community)
 
 ---
 
-## Grid Architecture
+## 🛑 The Challenge: The Grid Cannot Keep Up
+
+To train the Grok 5 model family in record time, Colossus 2 requires **1.5 Gigawatts** of continuous, high-fidelity electrical power. 
+- Traditional local utilities (e.g., TVA) take 3–5 years to permit and build transmission substations for loads exceeding 200 MW.
+- AI training loads are highly volatile. A synchronized AllReduce operation across 555,000 GPUs can cause a microsecond-scale power spike of 300+ MW, threatening to collapse grid frequency.
+
+---
+
+## ⚡ The Solution: The Sovereign Microgrid
+
+This repository manages the design, integration, and load-balancing microcode for the world's most advanced behind-the-meter energy island.
+
+### 1. Primary Generation: Mobile Gas Turbines
+- **Hardware:** Deployment of **Solar Turbines (Titan-350 and Taurus 70)** running on natural gas.
+- **Advantage:** Bypasses years of transmission line permitting. Delivers scalable baseload power directly to the data center switchgear.
+
+### 2. Frequency Buffering: The Megapack Array
+- **Storage:** Over **1 GWh of Tesla Megapacks** deployed as a grid shock-absorber.
+- **Function:** Absorbs the microsecond "spikes" of GPU training runs. The turbines provide the steady baseload, while the batteries handle the delta, preventing brownouts.
+
+### 3. Substation & Switchgear Orchestration
+- Integration of custom medium-voltage (MV) transformers.
+- **Microcode Sync:** The `xai-colossus-microcode` flash controller continuously feeds state data to the energy load balancer, executing DVFS (Dynamic Voltage and Frequency Scaling) across the GPUs if the Megapack buffer runs low.
+
+---
+
+## 🗺️ Power Topology
 
 ```mermaid
-flowchart TD
-    ERCOT[ERCOT Grid<br/>150 MVA Feed] --> XFMR[Substation Transformers<br/>4x 37.5 MVA redundant]
-    XFMR --> BUS[Primary 138kV Bus]
-    BUS --> DIST1[Distribution Zone A<br/>50 MVA — Compute Rows 1-80]
-    BUS --> DIST2[Distribution Zone B<br/>50 MVA — Compute Rows 81-160]
-    BUS --> DIST3[Distribution Zone C<br/>50 MVA — Compute Rows 161-200 + Infra]
-    MEGA[Tesla Megapack Array<br/>560 MWh / 140 MW discharge] --> BUS
-    SOLAR[On-site Solar<br/>12 MW peak] --> BUS
-    DIST1 --> PDU1[Smart PDUs<br/>GPU Load Monitoring]
-    DIST2 --> PDU2[Smart PDUs<br/>GPU Load Monitoring]
-    DIST3 --> PDU3[Smart PDUs<br/>GPU Load Monitoring]
-    PDU1 & PDU2 & PDU3 --> GPU[200,000+ H100 GPUs]
+graph TD
+    subgraph Generation
+        A[Memphis Utility Grid] -->|300MW Limit| C[Main Substation Switchgear]
+        B[Titan-350 Gas Turbines] -->|1.2GW Baseload| C
+    end
+    
+    subgraph Stabilization
+        C <-->|Bi-directional Sync| D[1 GWh Tesla Megapack Array]
+    end
+    
+    subgraph Delivery
+        C --> E[Medium Voltage Transformers]
+        E --> F[Rack PDUs]
+        F --> G[555,000x GB200 GPUs]
+    end
+    
+    subgraph Intelligence
+        H[Load Balancer Microcode] -.->|Discharge Control| D
+        H -.->|DVFS Throttling| G
+    end
 ```
 
 ---
 
-## Megapack Buffer System
+## 📊 Engineering Impact
 
-The 560 MWh Tesla Megapack array is not a backup — it is a **primary grid participant**:
-
-| Mode | Trigger | Response Time | Capacity |
-|---|---|---|---|
-| **Peak Shaving** | Grid demand >140 MVA | Automatic | 140 MW for 4 hours |
-| **Frequency Regulation** | Grid Hz deviation >0.1 | <100ms | 50 MW burst |
-| **Black Start** | Full grid loss | <30 seconds | Full facility for 2 hours |
-| **Solar Integration** | Solar surplus >2 MW | Continuous | Full absorption |
-| **Demand Response** | ERCOT curtailment signal | <5 minutes | 40 MW shed |
+| Metric | Traditional Utility | Sovereign Microgrid |
+|--------|---------------------|---------------------|
+| **Deployment Time** | 36–60 Months | **4–6 Months** |
+| **Grid Stability** | Vulnerable to AI Spikes | **Isolated & Buffered** |
+| **Peak Capacity** | 200–300 MW | **1.5 GW+** |
+| **Redundancy** | Grid-dependent | **N+1 Turbine/Battery** |
 
 ---
 
-## GPU Load Balancing
+## 🔐 About This Repository
 
-The `xai_energy_balancer.py` engine runs continuously at 100ms intervals:
+Contains the SCADA integration layers, turbine telemetry parsers, and Megapack discharge algorithms required to operate Colossus 2 as an independent energy state.
 
-- **Per-rack power telemetry** — 12,500 racks × 16 H100s each
-- **Predictive job scheduling** — 45-second lookahead on power demand curves
-- **Thermal-power co-optimization** — coordinates with cooling system to prevent simultaneous peak draw
-- **NUMA-aware allocation** — routes workloads to racks with available power headroom
-- **Cascade protection** — automatic load shedding before breaker trips
-
-```python
-# Real-time power envelope enforcement
-balancer = ColossusEnergyBalancer(
-    grid_capacity_mva=150,
-    megapack_capacity_mwh=560,
-    safety_margin=0.08,        # Never exceed 92% sustained
-    response_interval_ms=100
-)
-balancer.run_continuous()
-```
-
----
-
-## Efficiency Targets
-
-| Metric | Target | Current | Method |
-|---|---|---|---|
-| **PUE** | 1.12 | 1.14 (improving) | Closed-loop cooling integration |
-| **Grid Carbon Intensity** | <50 gCO2/kWh | 47 gCO2/kWh ✅ | ERCOT clean dispatch + solar |
-| **Transformer Efficiency** | >99.5% | 99.6% ✅ | ABB dry-type units |
-| **Megapack Round-Trip** | >92% | 92.3% ✅ | Optimized charge/discharge cycles |
-| **Cooling Power Ratio** | <12% of IT load | 11.8% ✅ | Water-side economizer |
-
----
-
-## Integration with Colossus Systems
-
-| System | Integration | Data Exchange |
-|---|---|---|
-| [`xai-colossus-cooling`](https://github.com/GlacierEQ/xai-colossus-cooling) | Thermal-power co-scheduling | 100ms telemetry loop |
-| [`xai-colossus-waterplant`](https://github.com/GlacierEQ/xai-colossus-waterplant) | Pump load forecasting | 500ms demand curves |
-| [`xai-colossus-servers`](https://github.com/GlacierEQ/xai-colossus-servers) | Per-GPU power envelopes | Real-time rack telemetry |
-| [`colossus-build-blueprint`](https://github.com/GlacierEQ/colossus-build-blueprint) | Phase gate power milestones | Build timeline sync |
-
----
-
-## Repository Structure
-
-```
-xai-colossus-energy/
-├── xai_energy_balancer.py       # Crown jewel — real-time GPU load balancer
-├── APEX_SYSTEM_MATRIX.md        # Cross-system integration map
-├── megapack-buffer/             # Megapack orchestration logic
-├── gauntlet_integration/        # Stress test scenarios
-├── audit_logs/                  # Operational compliance records
-└── docs/                        # Technical architecture deep-dives
-```
-
----
-
-## Gauntlet Stress Tests
-
-See [`gauntlet_integration/`](./gauntlet_integration/) for validated scenarios:
-
-1. **Grid Loss at Peak Load** — 150 MVA → Megapack in <30s, zero job loss
-2. **Solar Ramp Instability** — 12 MW step change, frequency held ±0.05 Hz
-3. **Megapack Cell Fault** — 10% capacity loss, transparent rebalancing
-4. **ERCOT Curtailment** — 40 MW shed in 4 minutes, priority workloads preserved
-5. **Transformer Failure** — Single 37.5 MVA unit loss, automatic load transfer
-
----
-
-*Part of the [xAI Colossus](https://github.com/GlacierEQ) infrastructure portfolio — the world's largest AI training cluster.*
+Part of the [GlacierEQ xAI Engineering Suite](https://github.com/GlacierEQ/xai-colossus-community).  
+*Powering the future of intelligence.*
