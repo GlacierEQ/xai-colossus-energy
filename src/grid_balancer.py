@@ -1,49 +1,109 @@
 import asyncio
 import random
+import json
+import logging
 from datetime import datetime
+from typing import Dict, Optional
+
+# APEX Sovereign Energy Stack
+# Part of xai-colossus-energy
+
+class TeslaMegapackController:
+    """
+    Direct control interface for 1 GWh Tesla Megapack Array.
+    Manages millisecond-scale frequency injection.
+    """
+    def __init__(self, cluster_id: str):
+        self.cluster_id = cluster_id
+        self.soc = 0.85 # State of Charge (85%)
+        self.max_discharge_mw = 500.0 # Instantaneous discharge capacity
+
+    async def pulse_discharge(self, required_mw: float) -> float:
+        """Discharges energy to neutralize a spike."""
+        actual_mw = min(required_mw, self.max_discharge_mw)
+        # 1 GWh capacity = 1000 MWh
+        energy_used_mwh = (actual_mw / 3600) # Assuming 1-second pulse
+        self.soc -= (energy_used_mwh / 1000.0)
+        return actual_mw
+
+class SolarTurbineManager:
+    """
+    Baseload management for Solar Turbines (Titan-350).
+    """
+    def __init__(self, count: int):
+        self.count = count
+        self.unit_capacity = 37.0 # MW per Titan-350
+        self.total_output = count * self.unit_capacity
+
+    def get_telemetry(self) -> Dict:
+        return {
+            "units_active": self.count,
+            "total_baseload_mw": self.total_output,
+            "fuel_flow_kg_s": self.count * 2.5
+        }
 
 class GridBalancer:
     """
-    APEX Energy Load Balancer
-    Synchronizes GPU power consumption with Tesla Megapack discharge rates.
+    Master Load Balancer for the 1.5 GW Sovereign Microgrid.
+    Synchronizes Turbines, Megapacks, and GPU DVFS states.
     """
-    
     def __init__(self):
-        self.megapack_charge_mwh = 850.0 # of 1000
-        self.grid_limit_mw = 300.0
-        self.turbine_output_mw = 1200.0
-        self.total_capacity_mw = self.grid_limit_mw + self.turbine_output_mw
+        self.megapacks = TeslaMegapackController("MEMPHIS_SOUTH")
+        self.turbines = SolarTurbineManager(32) # ~1.2 GW baseload
+        self.utility_limit_mw = 300.0
+        self.total_supply_mw = self.turbines.total_output + self.utility_limit_mw
+        self.logger = logging.getLogger("GRID_BALANCER")
 
-    async def sync_dvfs_state(self, current_load_mw):
+    async def reconcile_load(self, demand_mw: float) -> Dict:
         """
-        Executes Dynamic Voltage and Frequency Scaling (DVFS) logic.
-        Triggers if cluster load exceeds the instantaneous turbine + battery ceiling.
+        Main reconciliation loop. 
+        Sequence: Baseload -> Megapack Buffer -> DVFS Throttling.
         """
-        print(f"⚡ Grid Sync: {current_load_mw}MW / {self.total_capacity_mw}MW")
-        
-        if current_load_mw > self.total_capacity_mw:
-            delta = current_load_mw - self.total_capacity_mw
-            throttling_factor = 1.0 - (delta / current_load_mw)
-            print(f"🔥 OVERLOAD: Throttling cluster to {throttling_factor*100:.1f}% frequency via DVFS")
-            return throttling_factor
-        
-        print("🟢 Power State: NOMINAL (Megapack Buffer Active)")
-        return 1.0
+        telemetry = {
+            "timestamp": datetime.now().isoformat(),
+            "demand_mw": demand_mw,
+            "supply_baseload_mw": self.total_supply_mw,
+            "action": "NOMINAL",
+            "dvfs_factor": 1.0
+        }
 
-    async def simulate_allreduce_spike(self):
-        """Simulates the 300MW spike typical of massive AI training synchronizations."""
-        spike = random.uniform(250.0, 350.0)
-        base_load = 1150.0
-        return base_load + spike
+        if demand_mw <= self.total_supply_mw:
+            return telemetry
+
+        # Step 2: Engage Megapack Buffer
+        excess = demand_mw - self.total_supply_mw
+        injected = await self.megapacks.pulse_discharge(excess)
+        
+        remaining_excess = excess - injected
+        telemetry["megapack_injection_mw"] = injected
+
+        # Step 3: Trigger DVFS Throttling if buffer is insufficient
+        if remaining_excess > 0:
+            telemetry["dvfs_factor"] = 1.0 - (remaining_excess / demand_mw)
+            telemetry["action"] = "CRITICAL_THROTTLE"
+            self.logger.warning(f"GRID OVERLOAD: Applying DVFS {telemetry['dvfs_factor']:.2f}")
+        else:
+            telemetry["action"] = "BUFFER_ACTIVE"
+
+        return telemetry
 
 async def main():
     balancer = GridBalancer()
-    print("🚀 APEX ENERGY LOAD BALANCER ACTIVE [1.5 GW]")
-    
-    for _ in range(3):
-        load = await balancer.simulate_allreduce_spike()
-        throttle = await balancer.sync_dvfs_state(load)
-        await asyncio.sleep(1)
+    print("--------------------------------------------------")
+    print("🚀 APEX GIGAWATT GRID BALANCER v2.0")
+    print(f"Sovereign Supply: {balancer.total_supply_mw:.1f} MW")
+    print("--------------------------------------------------")
+
+    # Simulate a high-intensity training window
+    for i in range(5):
+        # Base load + AllReduce Spike (300-600MW)
+        simulated_demand = 1100.0 + random.uniform(200.0, 700.0)
+        status = await balancer.reconcile_load(simulated_demand)
+        
+        icon = "🟢" if status["action"] == "NOMINAL" else "🟡" if status["action"] == "BUFFER_ACTIVE" else "🔥"
+        print(f"{icon} Demand: {status['demand_mw']:.1f}MW | Action: {status['action']} | DVFS: {status['dvfs_factor']:.2f}")
+        await asyncio.sleep(0.5)
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     asyncio.run(main())
