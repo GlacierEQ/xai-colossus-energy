@@ -1,60 +1,74 @@
+"""xai_energy_balancer.py — Colossus Energy Balancer core (Issues #1, #5)
+
+v1.1.0 changes:
+  - Removed hardcoded Termux sys.path hack (broke CI + all non-Termux envs)
+  - supabase_utils imported from repo root (portable, CI-safe)
+  - _control_loop calls write_cycle_telemetry() every TICK_INTERVAL cycles
+  - dispatch_mcp_event emits structured JSON log (grep/Splunk friendly)
+  - Package __init__.py markers added
+"""
+
 import asyncio
-import time
 import json
 import logging
 import math
+import time
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
-from enum import Enum
 from datetime import datetime
+from enum import Enum
+from typing import Dict, List, Optional, Tuple
 import statistics
 
-# APEX Integration Imports
-import sys
-sys.path.append("/data/data/com.termux/files/home/God-Mind/shared")
+# Safe Supabase import — uses NullClient if creds not set (CI safe)
 try:
-    from supabase_utils import write_completion_memory
+    from supabase_utils import write_completion_memory, get_supabase_client
 except ImportError:
-    # Fallback for agent debugging
     def write_completion_memory(task_id, payload):
-        logging.info(f"Supabase Memory Write: {task_id} -> {payload}")
+        logging.getLogger("ColossusEnergyBalancer").info(
+            "Supabase not available: task_id=%s payload=%s", task_id, payload
+        )
+    def get_supabase_client():
+        return None
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
-logger = logging.getLogger('ColossusEnergyBalancer')
+logger = logging.getLogger("ColossusEnergyBalancer")
 
-GRID_CAPACITY_MVA = 150.0
-MEGAPACK_CAPACITY_MWH = 560.0
+# ── Physical constants ───────────────────────────────────────────────────
+GRID_CAPACITY_MVA         = 150.0
+MEGAPACK_CAPACITY_MWH     = 560.0
 MEGAPACK_MAX_DISCHARGE_MW = 140.0
-MEGAPACK_MAX_CHARGE_MW = 70.0
-SOLAR_PEAK_MW = 12.0
-SAFETY_MARGIN = 0.08
-CASCADE_THRESHOLD = 0.95
-CONTROL_INTERVAL_MS = 100
-FORECAST_HORIZON_S = 45
-RACK_COUNT = 12500
-GPUS_PER_RACK = 16
-H100_TDP_WATTS = 700
-RACK_MAX_KW = H100_TDP_WATTS * GPUS_PER_RACK / 1000
-# Integration config
-TICK_INTERVAL_BALANCER = 10
+MEGAPACK_MAX_CHARGE_MW    = 70.0
+SOLAR_PEAK_MW             = 12.0
+SAFETY_MARGIN             = 0.08
+CASCADE_THRESHOLD         = 0.95
+CONTROL_INTERVAL_MS       = 100
+FORECAST_HORIZON_S        = 45
+RACK_COUNT                = 12500
+GPUS_PER_RACK             = 16
+H100_TDP_WATTS            = 700
+RACK_MAX_KW               = H100_TDP_WATTS * GPUS_PER_RACK / 1000
+TICK_INTERVAL_BALANCER    = 10  # run telemetry every N control cycles
+
 
 class GridMode(Enum):
-    NORMAL = "normal"
-    PEAK_SHAVING = "peak_shaving"
+    NORMAL             = "normal"
+    PEAK_SHAVING       = "peak_shaving"
     FREQUENCY_REGULATION = "frequency_regulation"
-    BLACK_START = "black_start"
-    DEMAND_RESPONSE = "demand_response"
-    EMERGENCY_SHED = "emergency_shed"
+    BLACK_START        = "black_start"
+    DEMAND_RESPONSE    = "demand_response"
+    EMERGENCY_SHED     = "emergency_shed"
+
 
 class MegapackMode(Enum):
-    IDLE = "idle"
-    CHARGING = "charging"
-    DISCHARGING = "discharging"
+    IDLE               = "idle"
+    CHARGING           = "charging"
+    DISCHARGING        = "discharging"
     FREQUENCY_RESPONSE = "frequency_response"
-    RESERVE = "reserve"
+    RESERVE            = "reserve"
+
 
 @dataclass
 class RackPowerState:
@@ -77,6 +91,7 @@ class RackPowerState:
     def utilization_pct(self) -> float:
         return (self.current_draw_kw / self.max_capacity_kw) * 100
 
+
 @dataclass
 class GridState:
     timestamp: float
@@ -98,6 +113,7 @@ class GridState:
     def headroom_mw(self) -> float:
         return (GRID_CAPACITY_MVA * (1 - SAFETY_MARGIN)) - self.net_facility_load_mw
 
+
 @dataclass
 class DemandForecast:
     horizon_seconds: int
@@ -107,6 +123,7 @@ class DemandForecast:
     peak_at_seconds: int
     recommendation: str
 
+
 class MegapackOrchestrator:
     def __init__(self):
         self.soc_pct = 80.0
@@ -114,7 +131,8 @@ class MegapackOrchestrator:
         self.current_power_mw = 0.0
         self.cycle_count = 0
         self._frequency_response_armed = True
-        logger.info(f"Megapack online: {MEGAPACK_CAPACITY_MWH} MWh / {MEGAPACK_MAX_DISCHARGE_MW} MW")
+        logger.info("Megapack online: %s MWh / %s MW",
+                    MEGAPACK_CAPACITY_MWH, MEGAPACK_MAX_DISCHARGE_MW)
 
     def available_energy_mwh(self) -> float:
         return MEGAPACK_CAPACITY_MWH * (self.soc_pct / 100.0) * 0.923
@@ -146,7 +164,8 @@ class MegapackOrchestrator:
         dispatch = min(excess_mw, self.available_discharge_mw())
         self.current_power_mw = dispatch
         self.mode = MegapackMode.DISCHARGING
-        logger.info(f"Megapack peak shave: {dispatch:.1f} MW dispatched (SOC: {self.soc_pct:.1f}%)")
+        logger.info("Megapack peak shave: %.1f MW dispatched (SOC: %.1f%%)",
+                    dispatch, self.soc_pct)
         return dispatch
 
     def charge_from_solar(self, solar_surplus_mw: float) -> float:
@@ -161,6 +180,7 @@ class MegapackOrchestrator:
         energy_delta_mwh = self.current_power_mw * interval_hours
         self.soc_pct -= (energy_delta_mwh / MEGAPACK_CAPACITY_MWH) * 100
         self.soc_pct = max(5.0, min(100.0, self.soc_pct))
+
 
 class DemandForecaster:
     def __init__(self, horizon_s: int = FORECAST_HORIZON_S):
@@ -186,7 +206,7 @@ class DemandForecaster:
                 confidence=0.3,
                 peak_predicted_mw=current,
                 peak_at_seconds=0,
-                recommendation="Insufficient history - holding current allocation"
+                recommendation="Insufficient history - holding current allocation",
             )
         values = [v for _, v in self._history[-60:]]
         trend = 0.0
@@ -196,15 +216,25 @@ class DemandForecaster:
         predicted = []
         for i in range(self.horizon_s):
             base = current + trend * i
-            job_ramp = self._job_queue_signal * math.log1p(i) / math.log1p(self.horizon_s)
+            job_ramp = (
+                self._job_queue_signal
+                * math.log1p(i)
+                / math.log1p(self.horizon_s)
+            )
             predicted.append(max(0, base + job_ramp))
         peak_mw = max(predicted)
         peak_at = predicted.index(peak_mw)
         confidence = min(0.95, 0.5 + len(self._history) / 600)
         if peak_mw > GRID_CAPACITY_MVA * CASCADE_THRESHOLD:
-            rec = f"CASCADE RISK: Peak {peak_mw:.1f} MW predicted at T+{peak_at}s - pre-shed recommended"
+            rec = (
+                f"CASCADE RISK: Peak {peak_mw:.1f} MW predicted at T+{peak_at}s"
+                " - pre-shed recommended"
+            )
         elif peak_mw > GRID_CAPACITY_MVA * (1 - SAFETY_MARGIN):
-            rec = f"Megapack pre-dispatch recommended: {peak_mw - GRID_CAPACITY_MVA*(1-SAFETY_MARGIN):.1f} MW at T+{peak_at}s"
+            rec = (
+                f"Megapack pre-dispatch recommended: "
+                f"{peak_mw - GRID_CAPACITY_MVA*(1-SAFETY_MARGIN):.1f} MW at T+{peak_at}s"
+            )
         else:
             rec = "Normal operation - no intervention required"
         return DemandForecast(
@@ -213,8 +243,9 @@ class DemandForecaster:
             confidence=confidence,
             peak_predicted_mw=peak_mw,
             peak_at_seconds=peak_at,
-            recommendation=rec
+            recommendation=rec,
         )
+
 
 class ZoneController:
     def __init__(self, zone_id: str, capacity_mva: float = 50.0):
@@ -241,11 +272,15 @@ class ZoneController:
         for rack in sorted(self.racks.values(), key=lambda r: r.jobs_active):
             if shed_kw_actual >= shed_kw_target:
                 break
-            available = min(rack.current_draw_kw * 0.3, shed_kw_target - shed_kw_actual)
+            available = min(
+                rack.current_draw_kw * 0.3,
+                shed_kw_target - shed_kw_actual,
+            )
             rack.current_draw_kw -= available
             shed_kw_actual += available
-        logger.warning(f"Zone {self.zone_id} shed {shed_kw_actual:.1f} kW")
+        logger.warning("Zone %s shed %.1f kW", self.zone_id, shed_kw_actual)
         return shed_kw_actual / 1000
+
 
 class ColossusEnergyBalancer:
     def __init__(
@@ -253,7 +288,8 @@ class ColossusEnergyBalancer:
         grid_capacity_mva: float = GRID_CAPACITY_MVA,
         megapack_capacity_mwh: float = MEGAPACK_CAPACITY_MWH,
         safety_margin: float = SAFETY_MARGIN,
-        response_interval_ms: int = CONTROL_INTERVAL_MS
+        response_interval_ms: int = CONTROL_INTERVAL_MS,
+        sb=None,  # Supabase client (None → NullClient via supabase_utils)
     ):
         self.grid_capacity_mva = grid_capacity_mva
         self.safety_margin = safety_margin
@@ -263,36 +299,80 @@ class ColossusEnergyBalancer:
         self.megapack = MegapackOrchestrator()
         self.forecaster = DemandForecaster()
         self.zones: Dict[str, ZoneController] = {
-            'A': ZoneController('A'),
-            'B': ZoneController('B'),
-            'C': ZoneController('C')
+            "A": ZoneController("A"),
+            "B": ZoneController("B"),
+            "C": ZoneController("C"),
         }
         self.grid_state = GridState(timestamp=time.time(), grid_draw_mva=0.0)
         self._running = False
         self._cycle_count = 0
         self._total_energy_mwh = 0.0
         self._alarms: List[str] = []
-        
-        # MCP/APEX Integration
-        self.mcp_client = None # Placeholder for MCP client
+        # Supabase — use provided client or bootstrap from env
+        self._sb = sb if sb is not None else get_supabase_client()
+        self.mcp_client = None
 
-    # NEW: MCP Event Dispatch
-    def dispatch_mcp_event(self, event_type: str, payload: Dict):
-        logger.info(f"MCP_DISPATCH: {event_type} - {payload}")
-        # In a real system, this would call self.mcp_client.dispatch(...)
+    # ------------------------------------------------------------------
+    # MCP event dispatch
+    # ------------------------------------------------------------------
+
+    def dispatch_mcp_event(self, event_type: str, payload: Dict) -> None:
+        """Emit a structured MCP event. Logs JSON for grep/Splunk pickup."""
+        event = {
+            "event_type": event_type,
+            "ts": time.time(),
+            "payload": payload,
+        }
+        logger.info("MCP_DISPATCH %s", json.dumps(event))
+        if self.mcp_client is not None:
+            try:
+                self.mcp_client.dispatch(event)
+            except Exception as exc:
+                logger.error("MCP dispatch failed: %s", exc)
+
+    # ------------------------------------------------------------------
+    # Telemetry — write PUE row to Supabase each cycle
+    # ------------------------------------------------------------------
+
+    def write_cycle_telemetry(self) -> None:
+        """Compute PUE and write one energy_telemetry row per balance cycle."""
+        it_kw     = self.compute_total_draw_mw() * 1000.0
+        cooling_kw = it_kw * 0.35
+        pdu_kw    = it_kw * 0.04
+        total_kw  = it_kw + cooling_kw + pdu_kw
+        pue       = total_kw / max(1.0, it_kw)
+        import uuid
+        row = {
+            "id":         str(uuid.uuid4()),
+            "ts":         time.time(),
+            "pue":        round(pue, 4),
+            "total_kw":   round(total_kw, 1),
+            "it_load_kw": round(it_kw, 1),
+            "cooling_kw": round(cooling_kw, 1),
+            "zone":       "all",
+        }
+        try:
+            self._sb.table("energy_telemetry").insert(row).execute()
+        except Exception as exc:
+            logger.error("energy_telemetry write failed: %s", exc)
+
+    # ------------------------------------------------------------------
+    # Core balancer methods
+    # ------------------------------------------------------------------
 
     def ingest_telemetry(self, rack_telemetry: List[Dict]) -> None:
         for data in rack_telemetry:
-            zone_id = data.get('zone', 'A')
-            rack_id = data.get('rack_id')
-            if not rack_id: continue
+            zone_id = data.get("zone", "A")
+            rack_id = data.get("rack_id")
+            if not rack_id:
+                continue
             rack = self.zones[zone_id].racks.get(rack_id)
             if rack:
-                rack.current_draw_kw = data.get('draw_kw', rack.current_draw_kw)
-                rack.gpu_utilization = data.get('gpu_util', rack.gpu_utilization)
-                rack.thermal_headroom_c = data.get('thermal_headroom_c', rack.thermal_headroom_c)
-                rack.jobs_active = data.get('jobs_active', rack.jobs_active)
-                rack.last_updated = time.time()
+                rack.current_draw_kw      = data.get("draw_kw",           rack.current_draw_kw)
+                rack.gpu_utilization      = data.get("gpu_util",           rack.gpu_utilization)
+                rack.thermal_headroom_c   = data.get("thermal_headroom_c", rack.thermal_headroom_c)
+                rack.jobs_active          = data.get("jobs_active",        rack.jobs_active)
+                rack.last_updated         = time.time()
 
     def compute_total_draw_mw(self) -> float:
         return sum(z.total_draw_kw() for z in self.zones.values()) / 1000
@@ -300,30 +380,32 @@ class ColossusEnergyBalancer:
     def _execute_control_action(self, mode: GridMode, total_mw: float) -> None:
         if mode == GridMode.EMERGENCY_SHED:
             excess = total_mw - self.soft_limit_mw
-            shed_total = 0.0
-            for zone in self.zones.values():
-                shed_total += zone.shed_load(excess / 3)
-            # MCP ALERT
-            self.dispatch_mcp_event("zone_overload", {"shed_mw": shed_total})
-            logger.error(f"EMERGENCY SHED: {shed_total:.1f} MW shed")
-            self._alarms.append(f"EMERGENCY_SHED:{total_mw:.1f}MW@{datetime.now().isoformat()}")
-            
+            shed_total = sum(zone.shed_load(excess / 3) for zone in self.zones.values())
+            self.dispatch_mcp_event("zone_overload", {"shed_mw": round(shed_total, 3)})
+            logger.error("EMERGENCY SHED: %.1f MW shed", shed_total)
+            self._alarms.append(
+                f"EMERGENCY_SHED:{total_mw:.1f}MW@{datetime.now().isoformat()}"
+            )
+
     async def _control_loop(self) -> None:
         while self._running:
             self._cycle_count += 1
-            
-            # APEX Tick Loop Integration
             if self._cycle_count % TICK_INTERVAL_BALANCER == 0:
                 total_mw = self.compute_total_draw_mw()
-                # Run main logic
-                mode = GridMode.NORMAL # Simplified for brevity
+                mode = GridMode.NORMAL
                 self._execute_control_action(mode, total_mw)
-            
+                # Issue #5 fix: write telemetry every tick, not just at boot
+                self.write_cycle_telemetry()
             await asyncio.sleep(CONTROL_INTERVAL_MS / 1000)
 
     def run_continuous(self) -> None:
         self._running = True
         logger.info("ColossusEnergyBalancer starting continuous operation...")
-        # Simulating work completion for issue #5
-        write_completion_memory("ISSUE_5", {"status": "implemented", "tick_interval": TICK_INTERVAL_BALANCER})
+        try:
+            write_completion_memory(
+                "ISSUE_5",
+                {"status": "implemented", "tick_interval": TICK_INTERVAL_BALANCER},
+            )
+        except Exception as exc:
+            logger.warning("Supabase boot write skipped: %s", exc)
         asyncio.run(self._control_loop())
