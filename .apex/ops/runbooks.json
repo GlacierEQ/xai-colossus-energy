@@ -1,0 +1,48 @@
+{
+  "runbooks": {
+    "thermal_emergency": {
+      "trigger": "coolant_temp > 45C OR pump_failure",
+      "steps": [
+        "1. Alert: thermal_orchestrator → emergency_cooling_mode()",
+        "2. Reduce: GPU power cap to 70% across affected zone",
+        "3. Redirect: Nanosphere scheduler → reroute jobs to cool zones",
+        "4. Notify: xai-colossus-security → incident_response(thermal)",
+        "5. Log: aspen_grove → immutable_incident_record()"
+      ],
+      "escalation": "If temp > 50C for > 5min → full grid shutdown protocol"
+    },
+    "power_grid_fault": {
+      "trigger": "grid_frequency < 59.95Hz OR voltage_sag > 5%",
+      "steps": [
+        "1. Isolate: energy_balancer → disconnect_faulty_segment()",
+        "2. Buffer: megapack_buffer → absorb_transient(30s)",
+        "3. Shed: shed non-critical loads (community feeds last)",
+        "4. Restore: staged reconnection after grid stabilizes",
+        "5. Report: MLGW interconnection compliance log"
+      ],
+      "escalation": "If blackout > 30s → emergency diesel generators"
+    },
+    "security_breach": {
+      "trigger": "intrusion_detected OR unauthorized_access",
+      "steps": [
+        "1. Lock: rbac_engine → freeze_all_sessions()",
+        "2. Isolate: network_segment → quarantine_affected_nodes()",
+        "3. Forensics: playbook_runner → capture_evidence_snapshot()",
+        "4. Notify: xai-legal-intelligence → incident_report()",
+        "5. Recover: staged_restore_from_known_good()"
+      ],
+      "escalation": "If data_exfiltration suspected → full perimeter lockdown"
+    },
+    "water_system_failure": {
+      "trigger": "intake_flow < 1000 GPM OR quality_index < 90",
+      "steps": [
+        "1. Isolate: reclamation_ctrl → bypass_failed_stage()",
+        "2. Switch: activate backup municipal supply",
+        "3. Reduce: cooling demand via GPU thermal throttling",
+        "4. Repair: dispatch maintenance to affected treatment stage",
+        "5. Verify: water_quality → full_contamination_scan()"
+      ],
+      "escalation": "If aquifer draw > 0 → TDEC regulatory notification"
+    }
+  }
+}

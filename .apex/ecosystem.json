@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "org": "GlacierEQ",
+  "system": "APEX-COLOSSUS",
+  "mesh_id": "colossus-mesh-001",
+  "repos": {
+    "Pro-xAI": {"role": "flagship", "domain": "xai", "tier": 1},
+    "Pro-Colossus": {"role": "flagship", "domain": "colossus", "tier": 1},
+    "xai-colossus-cooling": {"role": "engine", "domain": "thermal", "tier": 1},
+    "xai-colossus-energy": {"role": "engine", "domain": "power", "tier": 1},
+    "colossus-gateway": {"role": "bridge", "domain": "mcp", "tier": 1},
+    "xai-colossus-servers": {"role": "engine", "domain": "compute", "tier": 2},
+    "xai-colossus-microcode": {"role": "engine", "domain": "firmware", "tier": 2},
+    "xai-colossus-security": {"role": "engine", "domain": "security", "tier": 2},
+    "xai-colossus-nanosphere": {"role": "engine", "domain": "nanofluid", "tier": 2},
+    "xai-colossus-waterplant": {"role": "engine", "domain": "water", "tier": 2},
+    "xai-colossus-build": {"role": "orchestrator", "domain": "construction", "tier": 2},
+    "colossus-build-blueprint": {"role": "planner", "domain": "scheduling", "tier": 2},
+    "xai-legal-intelligence": {"role": "intelligence", "domain": "legal", "tier": 2},
+    "colossus-realignment": {"role": "validator", "domain": "structural", "tier": 3},
+    "colossus2-realignment": {"role": "orchestrator", "domain": "realignment", "tier": 3},
+    "xai-colossus-community": {"role": "interface", "domain": "community", "tier": 3}
+  },
+  "pillars": {
+    "thermal": {"lead": "xai-colossus-cooling", "backup": "xai-colossus-nanosphere"},
+    "power": {"lead": "xai-colossus-energy", "backup": null},
+    "compute": {"lead": "xai-colossus-servers", "backup": "xai-colossus-microcode"},
+    "security": {"lead": "xai-colossus-security", "backup": null},
+    "water": {"lead": "xai-colossus-waterplant", "backup": null},
+    "legal": {"lead": "xai-legal-intelligence", "backup": null},
+    "construction": {"lead": "xai-colossus-build", "backup": "colossus-build-blueprint"}
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "mesh_version": "1.0",
+  "nodes": {
+    "thermal": {"endpoint": "localhost:8010", "protocol": "http", "health_path": "/health"},
+    "power": {"endpoint": "localhost:8011", "protocol": "http", "health_path": "/health"},
+    "compute": {"endpoint": "localhost:8012", "protocol": "http", "health_path": "/health"},
+    "security": {"endpoint": "localhost:8013", "protocol": "http", "health_path": "/health"},
+    "water": {"endpoint": "localhost:8014", "protocol": "http", "health_path": "/health"},
+    "mcp": {"endpoint": "localhost:8002", "protocol": "http", "health_path": "/health"},
+    "workers": {"endpoint": "localhost:8003", "protocol": "http", "health_path": "/health"}
+  },
+  "discovery": {
+    "method": "github_api",
+    "org": "GlacierEQ",
+    "label_filter": "colossus-mesh",
+    "poll_interval_s": 60
+  },
+  "communication": {
+    "pattern": "hub_and_spoke",
+    "hub": "colossus-gateway",
+    "fallback": "direct_http"
+  }
+}
