@@ -2,7 +2,7 @@ import time
 import random
 import logging
 
-# xAI Colossus: Energy Sovereignty - High Frequency Discharge Control
+# xAI Colossus: Energy Autonomousty - High Frequency Discharge Control
 # Real Logic: Managing sub-millisecond spikes for 2M GPUs.
 
 class MegapackBuffer:

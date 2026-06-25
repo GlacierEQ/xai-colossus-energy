@@ -5,7 +5,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Optional
 
-# APEX Sovereign Energy Stack
+# APEX Autonomous Energy Stack
 # Part of xai-colossus-energy
 
 class TeslaMegapackController:
@@ -44,7 +44,7 @@ class SolarTurbineManager:
 
 class GridBalancer:
     """
-    Master Load Balancer for the 1.5 GW Sovereign Microgrid.
+    Master Load Balancer for the 1.5 GW Autonomous Microgrid.
     Synchronizes Turbines, Megapacks, and GPU DVFS states.
     """
     def __init__(self):
@@ -91,7 +91,7 @@ async def main():
     balancer = GridBalancer()
     print("--------------------------------------------------")
     print("🚀 APEX GIGAWATT GRID BALANCER v2.0")
-    print(f"Sovereign Supply: {balancer.total_supply_mw:.1f} MW")
+    print(f"Autonomous Supply: {balancer.total_supply_mw:.1f} MW")
     print("--------------------------------------------------")
 
     # Simulate a high-intensity training window

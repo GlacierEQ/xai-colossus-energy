@@ -4,7 +4,7 @@
 [![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
 [![Pro-Code](https://img.shields.io/badge/Pro--Code-7--gate%20audit-brightgreen.svg)](PRO_CODE_AUDIT.md)
 
-> Sovereign power grid management for a **1.5GW AI supercomputer**.
+> Autonomous power grid management for a **1.5GW AI supercomputer**.
 > Grid balancing · Megapack FSM · PUE optimization · Demand forecasting.
 
 ---

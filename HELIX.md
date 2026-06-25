@@ -1,11 +1,11 @@
 # 🔱 Double Helix: xAI Colossus Energy
 
-> Alpha (What) + Omega (How) = Sovereign power grid management for 1.5GW AI supercomputer.
+> Alpha (What) + Omega (How) = Autonomous power grid management for 1.5GW AI supercomputer.
 
 ```
 BINDING: DOUBLE_HELIX:COLOSSUS_ENERGY v1.0
 PAIR:    Alpha (grid physics) ←→ Omega (forecasting + CI)
-MANTRA:  Two strands. One sovereign energy DNA.
+MANTRA:  Two strands. One autonomous energy DNA.
 ```
 
 ## 🧬 Alpha Strand (What — Domain Logic)

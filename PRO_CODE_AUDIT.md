@@ -16,7 +16,7 @@
 
 ## Engineering Laws (v0.4)
 
-1. **Law of Sovereign Boundaries** — Every subsystem is sovereign.
+1. **Law of Autonomous Boundaries** — Every subsystem is autonomous.
 2. **Law of Contract First** — Define the interface before the implementation.
 3. **Law of Graceful Degradation** — Every subsystem must handle its own failure.
 4. **Law of Telemetry First** — If you can't measure it, you can't manage it.

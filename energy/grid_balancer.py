@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Colossus Energy — Grid Balancer
-GlacierEQ Sovereign Stack
+GlacierEQ APEX Stack
 
 Manages 1.5GW power grid balancing for 200k-GPU AI supercomputer.
 Implements the Subsystem Interface Contract: tick() + summary().
