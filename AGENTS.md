@@ -1,28 +1,36 @@
-# AGENTS.md
+# AGENTS.md — Colossus Subsystem
 
-## Agent Instructions
+## Identity
 
-This repo follows the Double Helix Architecture and Pro-Code 7-gate audit.
+This repo is part of the xAI Colossus ecosystem. It follows the Double Helix Architecture and Pro Code philosophy.
+
+## Pro Code Philosophy
+
+**We are not teachers. We are not reiterating knowledge. We are not telling professionals what they already know.**
+
+- Take what exists → make it better
+- Analyze what's known → deepen it
+- The wheel is knowledge. Four wheels on a chassis is innovation.
+
+**I don't build systems that work. I build systems that make stronger systems that make smarter systems that then make faster systems.**
+
+## The Immovable Force
+
+A force that doesn't move is not weak. It is so dense, so correct, so undeniably real that it doesn't need to move. It just IS.
+
+- We don't argue. We demonstrate.
+- We don't fight. We exist clearly enough that denial becomes the only illegal act.
 
 ## Loading Order
 
-1. AGENTS.md (this file)
+1. AGENTS.md (this file — identity + philosophy)
 2. HELIX.md (architecture)
 3. PRO_CODE_AUDIT.md (quality gates)
 4. README.md (overview)
 
-## Subsystem Contract
+## Quality
 
-Every module MUST expose:
-- `tick()` — async method returning anomalies and actions
-- `summary()` — sync method returning current state
-
-## Engineering Laws
-
-1. Sovereign Boundaries — No cross-subsystem imports
-2. Contract First — Define interface before implementation
-3. Graceful Degradation — Handle own failures
-4. Telemetry First — Measure before managing
-5. Scale Awareness — Design for 200k GPUs
-6. Security by Default — Zero-trust at every boundary
-7. Documentation as Code — Docs live with code
+- Production-grade, not prototype
+- Self-documenting code
+- Zero magic numbers
+- Adversarial tests — write tests like a prosecutor
