@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 #!/usr/bin/env python3
 """
 COLOSSUS POWER ARBITRAGE OPTIMIZER

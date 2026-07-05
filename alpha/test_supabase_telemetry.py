@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """tests/test_supabase_telemetry.py — Issue #1 acceptance criteria.
 
 Verify that:

@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """tests/test_energy_balancer_mcp.py — Issue #5 acceptance criteria.
 
 Verify that a 5% budget overrun causes dispatch_mcp_event to emit

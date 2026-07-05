@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """megapack_buffer/megapack_state_machine.py — Megapack FSM (Issue #6)
 
 Formal finite-state machine for the 560 MWh / 140 MW Megapack buffer.

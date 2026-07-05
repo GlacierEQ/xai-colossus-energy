@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """power_budget.py — GW-scale power budget model (Issue #3)
 
 Tracks real-time load across Colossus grid segments:

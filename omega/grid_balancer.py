@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 import asyncio
 import random
 import json

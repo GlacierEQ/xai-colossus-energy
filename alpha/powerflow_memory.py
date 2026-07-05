@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """Powerflow memory integration — writes each powerflow run result to the memory layer.
 
 Import this module anywhere in xai_energy_balancer.py or gauntlet_integration/ that

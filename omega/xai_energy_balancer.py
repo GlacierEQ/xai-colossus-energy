@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 """xai_energy_balancer.py — Colossus Energy Balancer core (Issues #1, #5)
 
 v1.1.0 changes:

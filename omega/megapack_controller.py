@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 """megapack_buffer/megapack_controller.py — Megapack state machine (Issue #6)
 
 Four explicit states: IDLE, CHARGING, DISCHARGING, FAULT.

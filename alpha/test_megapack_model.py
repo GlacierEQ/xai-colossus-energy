@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """tests/test_megapack_model.py — Issue #2 acceptance criteria.
 
 Gauntlet: grid drop at tick 5, assert discharge starts by tick 6.

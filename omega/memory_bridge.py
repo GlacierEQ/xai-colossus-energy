@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 """EnergyMemoryBridge — wraps colossus-gateway MemoryRouter for energy-specific writes.
 
 Every gauntlet run, powerflow scenario, and APEX throttle decision is dual-written

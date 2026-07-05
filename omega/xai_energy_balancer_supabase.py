@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 """xai_energy_balancer_supabase.py — Supabase telemetry layer for ColossusEnergyBalancer (Issue #1)
 
 Patches ColossusEnergyBalancer to:

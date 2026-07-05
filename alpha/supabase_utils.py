@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """supabase_utils.py — Supabase client bootstrap for xai-colossus-energy.
 
 Reads SUPABASE_URL and SUPABASE_KEY from environment variables.

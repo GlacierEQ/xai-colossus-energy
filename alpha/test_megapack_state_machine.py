@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """tests/test_megapack_state_machine.py — Issue #6 acceptance tests"""
 
 import pytest

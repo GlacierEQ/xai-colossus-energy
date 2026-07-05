@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 """electricity/pue_tracker.py — Real-time PUE tracker (Issue #7)
 
 Power Usage Effectiveness = total_facility_power / it_equipment_power

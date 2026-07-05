@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """tests/test_power_budget.py — Issue #3 acceptance criteria."""
 
 from unittest.mock import MagicMock, call

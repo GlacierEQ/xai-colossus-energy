@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """src/energy/pue_tracker.py — PUE Tracker Module (Issue #7)
 
 Gate requirement: PUE < 1.45 sustained over 24 hours.

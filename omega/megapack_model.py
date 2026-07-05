@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 """megapack_buffer/megapack_model.py — Tesla Megapack SoC + failover model (Issue #2)
 
 Models the 560 MWh / 140 MW Megapack buffer integrated with Colossus.

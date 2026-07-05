@@ -1,3 +1,4 @@
+# Omega (How) — Controllers | Alpha (What) — Pure Physics | 1337.
 """tests/test_megapack_controller.py — Issue #6 acceptance criteria.
 
 All four state transitions covered:

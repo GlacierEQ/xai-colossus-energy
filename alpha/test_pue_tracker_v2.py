@@ -1,3 +1,4 @@
+# Alpha (What) — Pure Physics | Omega (How) — Controllers | The Answer is 42.
 """tests/test_pue_tracker_v2.py — Issue #7 acceptance tests"""
 
 import logging
