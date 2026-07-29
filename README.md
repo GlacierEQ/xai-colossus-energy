@@ -1,98 +1,47 @@
-# ⚡ xAI Colossus Energy — Power Grid Management
+# xAI Colossus Energy — Rust Power Optimizer & Demand Response ⚡
 
-[![Tests](https://img.shields.io/badge/tests-6%20passing-brightgreen.svg)](https://github.com/GlacierEQ/xai-colossus-energy)
-[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/)
-[![Pro-Code](https://img.shields.io/badge/Pro--Code-7--gate%20audit-brightgreen.svg)](PRO_CODE_AUDIT.md)
+> **Rust energy optimizer with PUE targeting and Python demand-response load balancer.**
 
-> Autonomous power grid management for a **1.5GW AI supercomputer**.
-> Grid balancing · Megapack FSM · PUE optimization · Demand forecasting.
+[![Rust](https://img.shields.io/badge/Rust-Safety%20Critical-orange)]()
+[![Python](https://img.shields.io/badge/Python-3.9+-blue)]()
+[![Domain](https://img.shields.io/badge/Domain-Energy%20Optimization-yellow)]()
 
 ---
 
-## Architecture
+## 🎯 For Recruiters & Hiring Managers
 
-```
-┌─────────────────────────────────────────┐
-│        ENERGY ORCHESTRATOR              │
-│  tick-driven · auto-balance · forecast  │
-└──────────┬──────────────────────────────┘
-           │
-    ┌──────┼──────┬──────┬──────┐
-    ▼      ▼      ▼      ▼      ▼
-  GRID   MEGAPACK  PUE  DEMAND  UTILITY
-  BALANCER  FSM   OPTIMIZER FORECAST
-```
+This repository implements the **xAI Colossus Energy Optimizer** — managing 150MW+ electrical loads with a Rust memory-safe power state solver and Python demand-response load balancing. It demonstrates:
 
-## Quick Start
+- **Rust power state solver** computing cooling overhead and targeting PUE 1.08
+- **Demand-response grid integration** shedding non-critical batch training workloads during grid stress
+- **Real-time MW telemetry tracking** preventing transformer overloads
+- **Python simulation test wrapper** verifying energy calculation accuracy
 
-```python
-from energy.grid_balancer import GridBalancer
-import asyncio
+**Why this matters**: Datacenter energy optimization directly reduces operating costs by millions while preventing grid overload events during peak demand periods.
 
-balancer = GridBalancer()
-zones = {f"Z{i}": {"gpu_utilization": 0.8} for i in range(4)}
+---
 
-result = asyncio.run(balancer.tick(zones, tick_num=1))
-print(f"State: {result['state']}, Utilization: {result['utilization_pct']:.1f}%")
-```
+## 🔬 For Engineers & Technical Reviewers
 
-## Power Sources
+### Core Components
 
-| Source | Capacity | Efficiency | Role |
-|--------|----------|------------|------|
-| **Utility Grid** | 800 MW | 98% | Baseload |
-| **Solar Array** | 200 MW | 22% | Daytime supplement |
-| **Megapack Battery** | 300 MW | 92% | Peak shaving, backup |
-| **Generator** | 200 MW | 35% | Emergency backup |
+| Component | Language | Purpose |
+|---|---|---|
+| `src/energy_optimizer.rs` | Rust | Rust struct and PUE overhead calculation methods |
+| `tests/test_energy_optimizer.py` | Python | Test wrapper simulating power state transitions |
 
-## Grid States
+---
 
-| State | Condition | Action |
-|-------|-----------|--------|
-| NOMINAL | Utilization < 75% | Normal operation |
-| STRESSED | 75% ≤ Utilization < 90% | Warning, optimize load |
-| CRITICAL | Utilization ≥ 90% | Activate backup generators |
-| EMERGENCY | Grid failure | Load shedding |
+## 🤖 ML/AI & Programmatic Mesh Integration
 
-## Double Helix
+- **MCP Tool**: `query_energy_pue()` — energy efficiency telemetry queryable by agents
+- **Mastermind Sidecar**: Fully connected to APEX Highway mesh
+- **SHA-256 Integrity**: Tracked in `.integrity/file_hashes.json`
 
-**Alpha (What)**: `energy/` — Grid balancer, Megapack FSM, PUE optimizer
-**Omega (How)**: `orchestrator/` — Energy orchestrator, forecasting pipeline
+---
 
-See [`HELIX.md`](HELIX.md) for architecture details.
-
-## Testing
+## ⚡ Quick Start
 
 ```bash
-python -m pytest tests/ -v
+python3 tests/test_energy_optimizer.py
 ```
-
-**6 tests** passing: state management, utilization calculation, headroom tracking, summary structure.
-
-## Scale
-
-| Metric | Value |
-|--------|-------|
-| Total capacity | 1.5 GW |
-| Power sources | 4 |
-| Grid states | 5 |
-| Tick interval | 500ms |
-| PUE target | < 1.1 |
-
----
-
-> *"1.5GW balanced. Every watt accounted for."*
-
----
-
-## Fleet ops (transparent)
-
-This repo may include **`.integrity/`** (SHA-256 baselines / watchdog) and/or a health sidecar.
-These are **documented multi-repo fleet operations**, not covert implants.
-
-See [SECURITY_AND_FLEET_OPS.md](SECURITY_AND_FLEET_OPS.md) and
-`~/GlacierEQ_Swarm/state/PORTFOLIO_SHADOW_AND_GAUNTLET.md`.
-
-## Helix strand
-
-See [HELIX_STRAND.md](HELIX_STRAND.md) — piston/spiral role in the portfolio double helix.
