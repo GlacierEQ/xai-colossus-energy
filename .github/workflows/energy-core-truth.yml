@@ -1,0 +1,45 @@
+name: Energy Family Truth Gate
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  bounded-family-verification:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Report Rust toolchain
+        run: |
+          rustc --version
+          cargo --version
+          rustfmt --version
+
+      - name: Run bounded energy-family verifier
+        run: bash -euo pipefail scripts/ci/verify_portfolio_core.sh
+
+      - name: Upload verification receipts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: energy-family-verification
+          path: .verification-artifacts/
+          if-no-files-found: error
+          include-hidden-files: true
+          retention-days: 14
