@@ -1,0 +1,11 @@
+[package]
+name = "colossus-energy-model"
+version = "0.1.0"
+edition = "2021"
+description = "Independent compute-facility energy scenario model"
+license = "MIT"
+publish = false
+
+[lib]
+name = "colossus_energy_model"
+path = "src/lib.rs"
