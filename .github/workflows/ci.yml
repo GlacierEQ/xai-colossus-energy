@@ -11,4 +11,7 @@ jobs:
     uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-quick-ci.yml@main
     with:
       repo_name: ${{ github.event.repository.name }}
-      language: python
+      language: generic
+      strict: true
+      verify_script: scripts/ci/verify_portfolio_core.sh
+      upload_artifacts: true
