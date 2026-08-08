@@ -9,26 +9,33 @@ on:
     # Run daily at 06:00 UTC to catch key rotation issues early
     - cron: '0 6 * * *'
 
+permissions:
+  contents: read
+
 jobs:
   memory-health:
     name: Energy Memory Layer Health
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
           cache: pip
+          cache-dependency-path: requirements-memory.txt
 
-      - name: Install dependencies
-        run: pip install httpx pinecone-client pytest python-dotenv
+      - name: Install declared memory dependencies
+        run: python -m pip install --disable-pip-version-check -r requirements-memory.txt
 
-      - name: Run unit tests
-        run: |
-          ENERGY_MEMORY_ENABLED=false pytest src/memory/tests/ -v
+      - name: Run memory unit tests
+        run: ENERGY_MEMORY_ENABLED=false python -m pytest src/memory/tests/ -v
 
       - name: Memory health check (degraded = warn, not fail)
         env:
