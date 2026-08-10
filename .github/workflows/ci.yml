@@ -8,7 +8,7 @@ on:
 
 jobs:
   ci:
-    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-quick-ci.yml@main
+    uses: GlacierEQ/public-actions-runner-host/.github/workflows/reusable-quick-ci.yml@a6085dae73bb80e91b845fd4a0d2f73a9c6b985a
     with:
       repo_name: ${{ github.event.repository.name }}
       language: generic
