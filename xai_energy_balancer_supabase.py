@@ -23,7 +23,8 @@ class SupabaseTelemetryMixin:
 
     def __init__(self, *args, sb=None, **kwargs):
         super().__init__(*args, **kwargs)
-        self._sb = sb
+        if sb is not None:
+            self._sb = sb
         self._pue_over_cycles = 0
         self._pue_critical_written = False
 
