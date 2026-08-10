@@ -1,42 +1,25 @@
-"""xai_energy_balancer_supabase.py — Supabase telemetry layer for ColossusEnergyBalancer (Issue #1)
+"""Supabase telemetry for ``ColossusEnergyBalancer``.
 
-Patches ColossusEnergyBalancer to:
-  1. Write a startup heartbeat to connector_jobs
-  2. Write PUE telemetry to energy_telemetry on every balance cycle
-  3. Write CRITICAL event to audit_events if PUE > 1.45 for > 5 consecutive cycles
+Canonical GlacierEQ sinks:
+  1. Startup/runtime telemetry -> ``apex_loop_health``
+  2. PUE cycle telemetry       -> ``apex_loop_health`` metadata
+  3. Critical PUE receipts     -> ``apex_ops_log``
 
-Usage
------
-    from xai_energy_balancer import ColossusEnergyBalancer
-    from xai_energy_balancer_supabase import SupabaseTelemetryMixin
-
-    class InstrumentedBalancer(SupabaseTelemetryMixin, ColossusEnergyBalancer):
-        pass
-
-    balancer = InstrumentedBalancer(sb=supabase_client)
-    balancer.start_with_heartbeat()
+The retired ``connector_jobs`` queue and nonexistent ``energy_telemetry`` /
+``audit_events`` tables are intentionally not used.
 """
 
+import json
 import logging
-import time
-import uuid
-from typing import Optional
 
 logger = logging.getLogger("ColossusEnergyBalancer.Supabase")
 
-PUE_ALERT_THRESHOLD  = 1.45
-PUE_ALERT_CYCLES     = 5    # consecutive over-limit cycles before CRITICAL event
+PUE_ALERT_THRESHOLD = 1.45
+PUE_ALERT_CYCLES = 5
 
 
 class SupabaseTelemetryMixin:
-    """Mixin that adds Supabase telemetry to ColossusEnergyBalancer.
-
-    The host class must implement:
-      - compute_total_draw_mw() -> float
-      - zones: Dict[str, ZoneController]  (used for cooling load estimate)
-
-    Extra __init__ kwarg: sb (Supabase client).
-    """
+    """Add GlacierEQ observability writes to ``ColossusEnergyBalancer``."""
 
     def __init__(self, *args, sb=None, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,106 +27,112 @@ class SupabaseTelemetryMixin:
         self._pue_over_cycles = 0
         self._pue_critical_written = False
 
-    # ------------------------------------------------------------------
-    # Startup heartbeat
-    # ------------------------------------------------------------------
-
     def start_with_heartbeat(self) -> None:
-        """Write startup heartbeat then begin continuous operation."""
+        """Write startup health and then begin continuous operation."""
         self._write_heartbeat()
-        self.run_continuous()  # from ColossusEnergyBalancer
+        self.run_continuous()
 
     def _write_heartbeat(self) -> None:
         if self._sb is None:
             logger.info("Heartbeat: no Supabase client — skipping")
             return
+
         row = {
-            "id": str(uuid.uuid4()),
-            "connector": "xai_energy_balancer",
-            "repo": "xai-colossus-energy",
-            "status": "STARTED",
-            "ts": time.time(),
+            "component": "xai_energy_balancer",
+            "layer": "energy_runtime",
+            "status": "HEALTHY",
+            "operator": "xai_energy_balancer",
+            "target_service": "xai-colossus-energy",
             "metadata": {
+                "event": "startup",
                 "grid_capacity_mva": self.grid_capacity_mva,
-                "megapack_capacity_mwh": self.megapack.soc_pct,  # current SoC at boot
+                "megapack_soc_pct": self.megapack.soc_pct,
                 "zones": list(self.zones.keys()),
+                "contract": "glaciereq-apex-loop-health-v1",
             },
         }
         try:
-            self._sb.table("connector_jobs").insert(row).execute()
-            logger.info("Heartbeat written to connector_jobs")
+            self._sb.table("apex_loop_health").insert(row).execute()
+            logger.info("Heartbeat written to apex_loop_health")
         except Exception as exc:
             logger.error("Heartbeat Supabase write failed: %s", exc)
 
-    # ------------------------------------------------------------------
-    # Per-cycle telemetry — call this inside _control_loop
-    # ------------------------------------------------------------------
-
     def write_cycle_telemetry(self, zone: str = "all") -> None:
-        """Write one PUE telemetry row.  Call once per balance cycle."""
-        it_kw  = self.compute_total_draw_mw() * 1000.0
-        # Cooling estimate: 35% of IT load (conservative until PUETracker is running)
+        """Write one PUE observation to the canonical loop-health surface."""
+        it_kw = self.compute_total_draw_mw() * 1000.0
         cooling_kw = it_kw * 0.35
-        pdu_kw     = it_kw * 0.04
-        total_kw   = it_kw + cooling_kw + pdu_kw
-        pue        = total_kw / max(1.0, it_kw)
+        pdu_kw = it_kw * 0.04
+        total_kw = it_kw + cooling_kw + pdu_kw
+        pue = total_kw / max(1.0, it_kw)
 
         if self._sb is not None:
             row = {
-                "id": str(uuid.uuid4()),
-                "ts": time.time(),
-                "pue": round(pue, 4),
-                "total_kw": round(total_kw, 1),
-                "it_load_kw": round(it_kw, 1),
-                "cooling_kw": round(cooling_kw, 1),
-                "zone": zone,
+                "component": "xai_energy_balancer",
+                "layer": "energy_telemetry",
+                "status": "DEGRADED" if pue > PUE_ALERT_THRESHOLD else "HEALTHY",
+                "operator": "xai_energy_balancer",
+                "target_service": "xai-colossus-energy",
+                "metadata": {
+                    "pue": round(pue, 4),
+                    "total_kw": round(total_kw, 1),
+                    "it_load_kw": round(it_kw, 1),
+                    "cooling_kw": round(cooling_kw, 1),
+                    "pdu_kw": round(pdu_kw, 1),
+                    "zone": zone,
+                    "threshold": PUE_ALERT_THRESHOLD,
+                    "contract": "glaciereq-apex-loop-health-v1",
+                },
             }
             try:
-                self._sb.table("energy_telemetry").insert(row).execute()
+                self._sb.table("apex_loop_health").insert(row).execute()
             except Exception as exc:
-                logger.error("energy_telemetry Supabase write failed: %s", exc)
+                logger.error("apex_loop_health telemetry write failed: %s", exc)
 
-        # --- PUE over-limit tracking ---
         if pue > PUE_ALERT_THRESHOLD:
             self._pue_over_cycles += 1
             if self._pue_over_cycles >= PUE_ALERT_CYCLES and not self._pue_critical_written:
-                self._pue_critical_written = True
                 self._write_pue_critical(pue)
         else:
             self._pue_over_cycles = 0
             self._pue_critical_written = False
 
     def _write_pue_critical(self, pue: float) -> None:
-        """Write CRITICAL event to audit_events (PUE > 1.45 for > 5 cycles).
-
-        Idempotent: once a CRITICAL row is written for the current over-limit
-        streak, further calls are no-ops until PUE returns under threshold
-        (which clears ``_pue_critical_written`` in the tick path).
-        """
+        """Write one idempotent critical PUE receipt for the active streak."""
         if self._pue_critical_written:
             return
+
         if self._sb is None:
-            logger.error("PUE CRITICAL: %.4f > %.2f for >%d cycles (no Supabase)",
-                         pue, PUE_ALERT_THRESHOLD, PUE_ALERT_CYCLES)
+            logger.error(
+                "PUE CRITICAL: %.4f > %.2f for %d cycles (no Supabase)",
+                pue,
+                PUE_ALERT_THRESHOLD,
+                self._pue_over_cycles,
+            )
             self._pue_critical_written = True
             return
+
         row = {
-            "id": str(uuid.uuid4()),
-            "event_type": "PUE_CRITICAL",
-            "severity": "CRITICAL",
-            "payload": {
-                "pue": round(pue, 4),
-                "threshold": PUE_ALERT_THRESHOLD,
-                "cycles_over": self._pue_over_cycles,
-            },
-            "ts": time.time(),
+            "action": "xai_energy_balancer_pue_critical",
+            "status": "critical",
+            "details": json.dumps(
+                {
+                    "repo": "xai-colossus-energy",
+                    "pue": round(pue, 4),
+                    "threshold": PUE_ALERT_THRESHOLD,
+                    "cycles_over": self._pue_over_cycles,
+                    "contract": "glaciereq-apex-ops-log-v1",
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
         }
         try:
-            self._sb.table("audit_events").insert(row).execute()
+            self._sb.table("apex_ops_log").insert(row).execute()
             self._pue_critical_written = True
             logger.error(
-                "PUE CRITICAL written to audit_events: pue=%.4f (%d cycles)",
-                pue, self._pue_over_cycles,
+                "PUE CRITICAL written to apex_ops_log: pue=%.4f (%d cycles)",
+                pue,
+                self._pue_over_cycles,
             )
         except Exception as exc:
-            logger.error("audit_events CRITICAL write failed: %s", exc)
+            logger.error("apex_ops_log CRITICAL write failed: %s", exc)
