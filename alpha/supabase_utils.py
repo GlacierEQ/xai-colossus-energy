@@ -7,16 +7,19 @@ that logs writes at INFO and never raises — so no module crashes on import.
 
 Usage
 -----
-    from supabase_utils import get_supabase_client, write_completion_memory
+    from supabase_utils import get_supabase_client, write_completion_receipt
 
-    sb = get_supabase_client()          # None in CI, real client in prod
-    write_completion_memory("ISSUE_5", {"status": "ok"})  # always safe
+    sb = get_supabase_client()
+    write_completion_receipt("ISSUE_5", {"status": "ok"})
+
+``write_completion_memory`` remains as a backward-compatible alias, but the
+canonical sink is now ``apex_ops_log`` rather than the retired
+``connector_jobs`` queue.
 """
 
+import json
 import logging
 import os
-import time
-import uuid
 
 logger = logging.getLogger("supabase_utils")
 
@@ -55,23 +58,30 @@ def get_supabase_client():
         return _NullSupabaseClient()
 
 
-def write_completion_memory(task_id: str, payload: dict) -> None:
-    """Write a task completion record to the connector_jobs table.
-
-    Always safe: logs at INFO and returns if Supabase is unavailable.
-    """
+def write_completion_receipt(task_id: str, payload: dict) -> None:
+    """Write a completion receipt to the canonical GlacierEQ ops log."""
     sb = get_supabase_client()
-    row = {
-        "id": str(uuid.uuid4()),
-        "task_id": task_id,
-        "connector": "xai_energy_balancer",
-        "repo": "xai-colossus-energy",
-        "status": "COMPLETED",
-        "ts": time.time(),
-        "metadata": payload,
-    }
     try:
-        sb.table("connector_jobs").insert(row).execute()
-        logger.info("write_completion_memory: task_id=%s written", task_id)
+        row = {
+            "action": "xai_energy_balancer_completion",
+            "status": str(payload.get("status", "completed")),
+            "details": json.dumps(
+                {
+                    "task_id": task_id,
+                    "repo": "xai-colossus-energy",
+                    "payload": payload,
+                    "contract": "glaciereq-apex-ops-log-v1",
+                },
+                sort_keys=True,
+                separators=(",", ":"),
+            ),
+        }
+        sb.table("apex_ops_log").insert(row).execute()
+        logger.info("write_completion_receipt: task_id=%s written", task_id)
     except Exception as exc:
-        logger.error("write_completion_memory failed: %s", exc)
+        logger.error("write_completion_receipt failed: %s", exc)
+
+
+def write_completion_memory(task_id: str, payload: dict) -> None:
+    """Backward-compatible alias for :func:`write_completion_receipt`."""
+    write_completion_receipt(task_id, payload)
