@@ -27,10 +27,17 @@ from .electricity_thermal_orchestrator import (
     PowerConstraint,
     ThermalAlert,
 )
-from .electricity_xai_bridge import (
-    ElectricityXAIBridge,
-    PowerAllocationEngine,
-)
+
+# FastAPI bridge is optional — keep package importable without fastapi so
+# pue_tracker and other pure modules can be tested on the shipped path.
+try:
+    from .electricity_xai_bridge import (  # type: ignore
+        ElectricityXAIBridge,
+        PowerAllocationEngine,
+    )
+except ImportError:  # pragma: no cover - optional dependency
+    ElectricityXAIBridge = None  # type: ignore
+    PowerAllocationEngine = None  # type: ignore
 
 __all__ = [
     # Boot core / grid
@@ -45,7 +52,7 @@ __all__ = [
     "ConstraintMode",
     "PowerConstraint",
     "ThermalAlert",
-    # Bridge
+    # Bridge (optional)
     "ElectricityXAIBridge",
     "PowerAllocationEngine",
 ]

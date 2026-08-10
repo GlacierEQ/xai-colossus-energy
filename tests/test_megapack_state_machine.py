@@ -84,8 +84,19 @@ def test_charging_blocked_at_soc_cap():
 
 def test_auto_idle_on_soc_floor_during_discharge():
     """update_soc() must auto-return to IDLE when SoC hits floor mid-discharge."""
+    from megapack_buffer.megapack_state_machine import (
+        CAPACITY_MWH,
+        MAX_DISCHARGE_MW,
+        SOC_MIN_DISCHARGE,
+    )
+
     m = fsm(soc=11.0)
-    m.start_discharging(demand_excess_mw=5.0)
-    # Drain past floor
-    m.update_soc(interval_hours=1.0)
+    m.start_discharging(demand_excess_mw=MAX_DISCHARGE_MW)
+    # Drain long enough that SoC falls through the 10% floor given 560 MWh capacity.
+    # hours ≈ ((soc - floor)/100 * capacity) / power  + epsilon
+    hours = ((11.0 - SOC_MIN_DISCHARGE) / 100.0 * CAPACITY_MWH) / max(
+        m.current_power_mw, 1e-9
+    ) + 0.05
+    m.update_soc(interval_hours=hours)
+    assert m.soc_pct <= SOC_MIN_DISCHARGE
     assert m.state == MegapackState.IDLE

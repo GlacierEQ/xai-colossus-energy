@@ -11,8 +11,8 @@ All four state transitions covered:
 """
 
 from unittest.mock import MagicMock
-from megapack_controller import MegapackController, MegapackState
-from megapack_model import MegapackConfig, CRITICAL_SOC_PCT
+from megapack_buffer.megapack_controller import MegapackController, MegapackState
+from megapack_buffer.megapack_model import MegapackConfig, CRITICAL_SOC_PCT
 
 DEFAULT_CFG = MegapackConfig(initial_soc_pct=80.0)
 

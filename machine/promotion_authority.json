@@ -1,0 +1,11 @@
+{
+  "schema": "glaciereq.promotion-authority-grant.v1",
+  "repository": "GlacierEQ/xai-colossus-energy",
+  "source_sha": "b3eaa7a0373a4d9ab176e17c86c3df2365eb1198a0aa17ee85120d6dbe0311cc",
+  "proof_receipt_digest": "9c6906db6e19cdab9740ec5c9dbf94b0ab3135f5752bd8cbfebc31f43195e6f9",
+  "not_after": 1788927149.234226,
+  "mac": "8fa9f8f2ebeb7b5c0470fd83801c3bfa1970b4fcada80ddc91d5952277aafbb4",
+  "issuer": "local_operator_promotion_authority",
+  "verified": true,
+  "secret_ref": "src/promotion_authority.py::LOCAL_OPERATOR_SECRET"
+}

@@ -225,19 +225,20 @@ class MegapackStateMachine:
 
     def return_to_idle(self, reason: str = "nominal") -> None:
         """Transition any state → IDLE (always valid — emergency stop path)."""
+        from_state = self.state
         self.state = MegapackState.IDLE  # bypass graph for emergency stop
         self.current_power_mw = 0.0
         event = {
             "id":       str(uuid.uuid4()),
             "ts":       time.time(),
-            "from_state": self.state.value,
+            "from_state": from_state.value,
             "to_state": MegapackState.IDLE.value,
             "reason":   reason,
             "power_mw": 0.0,
             "soc_pct":  round(self.soc_pct, 2),
         }
         self._event_log.append(event)
-        logger.info("Megapack FSM: → IDLE | reason=%s", reason)
+        logger.info("Megapack FSM: %s → IDLE | reason=%s", from_state.value, reason)
         self._write_event(event)
 
     def update_soc(self, interval_hours: float) -> None:

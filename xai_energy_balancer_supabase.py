@@ -114,10 +114,18 @@ class SupabaseTelemetryMixin:
             self._pue_critical_written = False
 
     def _write_pue_critical(self, pue: float) -> None:
-        """Write CRITICAL event to audit_events (PUE > 1.45 for > 5 cycles)."""
+        """Write CRITICAL event to audit_events (PUE > 1.45 for > 5 cycles).
+
+        Idempotent: once a CRITICAL row is written for the current over-limit
+        streak, further calls are no-ops until PUE returns under threshold
+        (which clears ``_pue_critical_written`` in the tick path).
+        """
+        if self._pue_critical_written:
+            return
         if self._sb is None:
             logger.error("PUE CRITICAL: %.4f > %.2f for >%d cycles (no Supabase)",
                          pue, PUE_ALERT_THRESHOLD, PUE_ALERT_CYCLES)
+            self._pue_critical_written = True
             return
         row = {
             "id": str(uuid.uuid4()),
@@ -132,6 +140,7 @@ class SupabaseTelemetryMixin:
         }
         try:
             self._sb.table("audit_events").insert(row).execute()
+            self._pue_critical_written = True
             logger.error(
                 "PUE CRITICAL written to audit_events: pue=%.4f (%d cycles)",
                 pue, self._pue_over_cycles,

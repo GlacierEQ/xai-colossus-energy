@@ -4,7 +4,7 @@ Gauntlet: grid drop at tick 5, assert discharge starts by tick 6.
 """
 
 from unittest.mock import MagicMock
-from megapack_model import MegapackModel, MegapackConfig, MegapackEvent, CRITICAL_SOC_PCT
+from megapack_buffer.megapack_model import MegapackModel, MegapackConfig, MegapackEvent, CRITICAL_SOC_PCT
 
 DEFAULT_CFG = MegapackConfig(
     capacity_mwh=560.0,
