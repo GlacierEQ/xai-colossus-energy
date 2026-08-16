@@ -1,0 +1,14 @@
+name: APEX Estate Non-Regression
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  apex-non-regression:
+    uses: GlacierEQ/apex-control-plane/.github/workflows/estate-non-regression.yml@main
