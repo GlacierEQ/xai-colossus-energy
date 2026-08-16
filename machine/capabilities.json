@@ -1,1 +1,20 @@
-{"capabilities": ["hyper-scaling"]}
+{
+  "capabilities": [
+    "hyper-scaling",
+    "apex-mass-recovery-enrolled"
+  ],
+  "recovery": {
+    "identity": "APEX_IS_THE_COUNTER_TO_CANONICAL_DESTRUCTION",
+    "law": "MAXIMUM_COHERENT_ADVANCE",
+    "program": "mass-job-repo-recovery",
+    "dual_plane": true
+  },
+  "planes": {
+    "verified": [
+      "hyper-scaling"
+    ],
+    "implemented": [
+      "apex-mass-recovery-enrolled"
+    ]
+  }
+}
